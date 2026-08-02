@@ -1,4 +1,5 @@
 import type { SessionVisibility } from "../../packages/gateway-protocol/src/index.js";
+import { pruneMapToMaxSize } from "../infra/map-size.js";
 
 const SNAPSHOT_CACHE_LIMIT = 2_048;
 
@@ -35,13 +36,7 @@ function rememberSnapshot(key: string, snapshot: SessionSharingSnapshot): void {
 function rememberSnapshotAlias(alias: string, canonical: string): void {
   snapshotAliases.delete(alias);
   snapshotAliases.set(alias, canonical);
-  if (snapshotAliases.size <= SNAPSHOT_CACHE_LIMIT * 2) {
-    return;
-  }
-  const oldest = snapshotAliases.keys().next().value;
-  if (oldest) {
-    snapshotAliases.delete(oldest);
-  }
+  pruneMapToMaxSize(snapshotAliases, SNAPSHOT_CACHE_LIMIT * 2);
 }
 
 export function invalidateSessionSharingSnapshot(sessionKey?: string): void {

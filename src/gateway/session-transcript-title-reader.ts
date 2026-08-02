@@ -6,6 +6,7 @@ import {
   type SessionTranscriptMessageEvent,
   type SessionTranscriptReadScope,
 } from "../config/sessions/session-accessor.js";
+import { pruneMapToMaxSize } from "../infra/map-size.js";
 import { hasInterSessionUserProvenance } from "../sessions/input-provenance.js";
 import {
   extractMessageRole,
@@ -42,13 +43,7 @@ function sqliteTitleFieldCacheKey(target: ResolvedTranscriptReadTarget): string 
 function setSqliteTitleFieldCache(key: string, entry: SqliteTitleFieldCacheEntry): void {
   sqliteTitleFieldCache.delete(key);
   sqliteTitleFieldCache.set(key, entry);
-  if (sqliteTitleFieldCache.size <= SQLITE_TITLE_FIELD_CACHE_MAX_ENTRIES) {
-    return;
-  }
-  const oldestKey = sqliteTitleFieldCache.keys().next().value;
-  if (oldestKey !== undefined) {
-    sqliteTitleFieldCache.delete(oldestKey);
-  }
+  pruneMapToMaxSize(sqliteTitleFieldCache, SQLITE_TITLE_FIELD_CACHE_MAX_ENTRIES);
 }
 
 function readSqliteTitleProbeRange(

@@ -1,3 +1,4 @@
+import { pruneMapToMaxSize } from "../../infra/map-size.js";
 import { listSystemPresence } from "../../infra/system-presence.js";
 
 const TYPING_THROTTLE_MS = 1_000;
@@ -129,8 +130,6 @@ export function updateTypingConnections(params: {
   }
   typingConnections.delete(params.key);
   typingConnections.set(params.key, connections);
-  if (typingConnections.size > MAX_TYPING_THROTTLE_KEYS) {
-    typingConnections.delete(typingConnections.keys().next().value ?? "");
-  }
+  pruneMapToMaxSize(typingConnections, MAX_TYPING_THROTTLE_KEYS);
   return true;
 }

@@ -6,6 +6,7 @@ import { maxBytesForKind, type MediaKind } from "@openclaw/media-core/constants"
 import { extensionForMime, normalizeMimeType } from "@openclaw/media-core/mime";
 import { fileStore } from "../infra/file-store.js";
 import { openLocalFileSafely } from "../infra/fs-safe.js";
+import { pruneMapToMaxSize } from "../infra/map-size.js";
 import { withTempWorkspace } from "../infra/private-temp-workspace.js";
 import { resolvePreferredOpenClawTmpDir } from "../infra/tmp-openclaw-dir.js";
 import { runFfmpeg } from "./ffmpeg-exec.js";
@@ -222,18 +223,6 @@ function playbackSourceIdentityMatches(
   );
 }
 
-function setBoundedMapEntry<K, V>(map: Map<K, V>, key: K, value: V, maxEntries: number): void {
-  map.delete(key);
-  while (map.size >= maxEntries) {
-    const oldestKey = map.keys().next().value as K | undefined;
-    if (oldestKey === undefined) {
-      break;
-    }
-    map.delete(oldestKey);
-  }
-  map.set(key, value);
-}
-
 function readPlaybackInspection(cacheKey: string): PlaybackInspection | undefined {
   const inspection = playbackInspections.get(cacheKey);
   if (inspection) {
@@ -243,7 +232,9 @@ function readPlaybackInspection(cacheKey: string): PlaybackInspection | undefine
 }
 
 function cachePlaybackInspection(cacheKey: string, inspection: PlaybackInspection): void {
-  setBoundedMapEntry(playbackInspections, cacheKey, inspection, MAX_PLAYBACK_ENTRIES.inspections);
+  playbackInspections.delete(cacheKey);
+  playbackInspections.set(cacheKey, inspection);
+  pruneMapToMaxSize(playbackInspections, MAX_PLAYBACK_ENTRIES.inspections);
 }
 
 function playbackInspectionCacheKey(params: {
@@ -700,7 +691,9 @@ export async function resolvePlaybackTranscode(
     },
     () => {
       playbackJobs.delete(operationKey);
-      setBoundedMapEntry(playbackFailures, operationKey, Date.now(), MAX_PLAYBACK_ENTRIES.failures);
+      playbackFailures.delete(operationKey);
+      playbackFailures.set(operationKey, Date.now());
+      pruneMapToMaxSize(playbackFailures, MAX_PLAYBACK_ENTRIES.failures);
     },
   );
   return { kind: "preparing" };

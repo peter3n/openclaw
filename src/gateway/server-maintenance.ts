@@ -9,6 +9,7 @@ import {
 } from "../agents/worktrees/service.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { sweepStaleRunContexts } from "../infra/agent-events.js";
+import { pruneMapToMaxSize } from "../infra/map-size.js";
 import { pruneOrphanedDeliveryQueueMedia } from "../infra/outbound/delivery-queue-media-spool.js";
 import { cleanOldMedia } from "../media/store.js";
 import { startSkillCuratorMaintenance } from "../skills/workshop/curator.js";
@@ -241,17 +242,7 @@ export function startGatewayMaintenanceTimers(params: {
       }
     }
 
-    if (params.agentRunSeq.size > AGENT_RUN_SEQ_MAX) {
-      const excess = params.agentRunSeq.size - AGENT_RUN_SEQ_MAX;
-      let removed = 0;
-      for (const runId of params.agentRunSeq.keys()) {
-        params.agentRunSeq.delete(runId);
-        removed += 1;
-        if (removed >= excess) {
-          break;
-        }
-      }
-    }
+    pruneMapToMaxSize(params.agentRunSeq, AGENT_RUN_SEQ_MAX);
 
     for (const [runId, entry] of params.chatAbortControllers) {
       if (entry.projectSessionTerminalPending === true) {
