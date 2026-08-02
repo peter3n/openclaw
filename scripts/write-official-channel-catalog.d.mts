@@ -1,3 +1,4 @@
+export const OFFICIAL_CHANNEL_CATALOG_SOURCE_RELATIVE_PATH: "scripts/lib/official-external-channel-catalog.json";
 export const OFFICIAL_CHANNEL_CATALOG_RELATIVE_PATH: "dist/channel-catalog.json";
 
 export function buildOfficialChannelCatalog(params?: { repoRoot?: string; cwd?: string }): {
@@ -6,6 +7,7 @@ export function buildOfficialChannelCatalog(params?: { repoRoot?: string; cwd?: 
     version?: string;
     description?: string;
     source?: string;
+    kind?: string;
     openclaw: {
       plugin?: Record<string, unknown>;
       channel: Record<string, unknown>;
@@ -22,4 +24,13 @@ export function buildOfficialChannelCatalog(params?: { repoRoot?: string; cwd?: 
   }>;
 };
 
-export function writeOfficialChannelCatalog(params?: { repoRoot?: string; cwd?: string }): void;
+export function renderOfficialChannelCatalog(params?: { repoRoot?: string; cwd?: string }): string;
+export function writeOfficialChannelCatalog(params?: { repoRoot?: string; cwd?: string }): boolean;
+export function writeOfficialChannelCatalogSource(params?: {
+  repoRoot?: string;
+  cwd?: string;
+}): boolean;
+export function checkOfficialChannelCatalogSource(params?: {
+  repoRoot?: string;
+  cwd?: string;
+}): boolean;
