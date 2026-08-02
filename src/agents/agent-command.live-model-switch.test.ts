@@ -897,6 +897,7 @@ describe("agentCommand – LiveSessionModelSwitchError retry", () => {
         },
         finalizeRaw: () => text,
         finalize: () => text,
+        finalizeReplySnapshot: () => ({ disposition: "visible" as const, text }),
       };
     });
     state.buildAcpResultMock.mockImplementation((params: { payloadText?: string }) => ({

@@ -9,6 +9,11 @@ import {
   mergeAgentRunTerminalOutcome,
   type AgentRunTerminalOutcome,
 } from "../../agents/agent-run-terminal-outcome.js";
+import {
+  mergeAgentRunTerminalReplySnapshot,
+  normalizeAgentRunTerminalReplySnapshot,
+  type AgentRunTerminalReplySnapshot,
+} from "../../agents/agent-run-terminal-reply.js";
 import { onAgentEvent } from "../../infra/agent-events.js";
 import { isNonTerminalAgentRunStatus } from "../../shared/agent-run-status.js";
 import { setSafeTimeout } from "../../utils/timer-delay.js";
@@ -28,6 +33,7 @@ type AgentJobTerminalSnapshot = {
   pendingError?: boolean;
   timeoutPhase?: AgentRunTerminalOutcome["timeoutPhase"];
   providerStarted?: boolean;
+  terminalReply?: AgentRunTerminalReplySnapshot;
 };
 
 type AgentJobSource = "agent" | "chat" | "lifecycle";
@@ -117,10 +123,23 @@ function mergeSnapshot(
   existing: AgentRunSnapshot | undefined,
   incoming: AgentRunSnapshot,
 ): AgentRunSnapshot {
-  if (!existing || !shouldPreserveTerminalSnapshot(existing, incoming)) {
+  if (!existing) {
     return incoming;
   }
-  return { ...existing, cachedAt: incoming.cachedAt };
+  const terminalReply = mergeAgentRunTerminalReplySnapshot(
+    existing.terminalReply,
+    incoming.terminalReply,
+  );
+  const canonical = shouldPreserveTerminalSnapshot(existing, incoming) ? existing : incoming;
+  // Terminal status precedence and producer reply evidence are independent;
+  // a late sticky timeout must not erase the final reply (or vice versa).
+  return {
+    ...canonical,
+    ...(terminalReply ? { terminalReply } : {}),
+    cachedAt: incoming.cachedAt,
+    recordedAt: incoming.recordedAt,
+    version: incoming.version,
+  };
 }
 
 function notifyAgentRunWaiters(runId: string) {
@@ -256,6 +275,7 @@ function createSnapshotFromLifecycleEvent(params: {
     startedAt,
     endedAt,
   });
+  const terminalReply = normalizeAgentRunTerminalReplySnapshot(data?.terminalReply);
   return {
     runId,
     source: "lifecycle",
@@ -271,6 +291,7 @@ function createSnapshotFromLifecycleEvent(params: {
     ...(terminalOutcome.providerStarted !== undefined
       ? { providerStarted: terminalOutcome.providerStarted }
       : {}),
+    ...(terminalReply ? { terminalReply } : {}),
     version: nextAgentRunVersion(),
   };
 }
@@ -335,6 +356,7 @@ function parseDedupeObservation(entry: DedupeEntry): DedupeObservation {
         timeoutPhase?: unknown;
         providerStarted?: unknown;
         result?: unknown;
+        terminalReply?: unknown;
       }
     | undefined;
   const status = typeof payload?.status === "string" ? payload.status : undefined;
@@ -353,6 +375,9 @@ function parseDedupeObservation(entry: DedupeEntry): DedupeObservation {
   }
 
   const resultMeta = asOptionalRecord(asOptionalRecord(payload?.result)?.meta);
+  const terminalReply = normalizeAgentRunTerminalReplySnapshot(
+    payload?.terminalReply ?? resultMeta?.terminalReply,
+  );
   const startedAt = asFiniteNumber(payload?.startedAt);
   const endedAt = asFiniteNumber(payload?.endedAt) ?? entry.ts;
   const stopReason = asString(payload?.stopReason) ?? asString(resultMeta?.stopReason);
@@ -386,6 +411,7 @@ function parseDedupeObservation(entry: DedupeEntry): DedupeObservation {
       ...(terminalOutcome.providerStarted !== undefined
         ? { providerStarted: terminalOutcome.providerStarted }
         : {}),
+      ...(terminalReply ? { terminalReply } : {}),
     },
   };
 }
@@ -513,6 +539,7 @@ function publicSnapshot(snapshot: AgentRunObservation): AgentJobTerminalSnapshot
     pendingError: snapshot.pendingError,
     timeoutPhase: snapshot.timeoutPhase,
     providerStarted: snapshot.providerStarted,
+    terminalReply: snapshot.terminalReply,
   };
 }
 
