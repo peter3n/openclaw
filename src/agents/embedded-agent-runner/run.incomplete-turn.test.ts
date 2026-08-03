@@ -131,7 +131,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
       }),
     );
 
-    await runEmbeddedAgent({
+    const result = await runEmbeddedAgent({
       ...overflowBaseRunParams,
       runId: "run-tool-summary-failure-count",
     });
@@ -1613,7 +1613,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
       }),
     );
 
-    const result = await runEmbeddedAgent({
+    await runEmbeddedAgent({
       ...overflowBaseRunParams,
       allowEmptyAssistantReplyAsSilent: true,
       provider: "openai",
@@ -4556,7 +4556,7 @@ describe("runEmbeddedAgent incomplete-turn safety", () => {
       }),
     );
 
-    await runEmbeddedAgent({
+    const result = await runEmbeddedAgent({
       ...overflowBaseRunParams,
       allowEmptyAssistantReplyAsSilent: true,
       provider: "openai",
